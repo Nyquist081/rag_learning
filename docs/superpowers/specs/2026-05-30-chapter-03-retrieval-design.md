@@ -1,145 +1,145 @@
-# Chapter 03 Retrieval Design
+# 第 3 章检索系统设计说明
 
-Date: 2026-05-30
+日期：2026-05-30
 
-## Goal
+## 目标
 
-Expand Chapter 03, `Sparse、Dense 与 Hybrid Retrieval`, into a complete tutorial chapter. The chapter should match the depth and style of Chapters 01 and 02: theory first, then implementation principles, engineering trade-offs, failure modes, demo mapping, and practical checklists.
+将第 3 章 `Sparse、Dense 与 Hybrid Retrieval` 扩写成完整教程章节。深度和写法对齐第 1、2 章：先讲理论，再讲实现原理、工程取舍、失败模式、demo 对照和实践检查清单。
 
-After reading the chapter, the reader should be able to:
+读完本章后，读者应该能做到：
 
-- Explain what retrieval is responsible for inside a RAG system.
-- Distinguish sparse retrieval, dense retrieval, and hybrid retrieval.
-- Understand the BM25 formula at the level needed for engineering decisions.
-- Understand embedding retrieval, vector similarity, and why semantic similarity is not the same as answer support.
-- Explain why hybrid retrieval is commonly used in production RAG.
-- Use RRF and weighted fusion conceptually, including trade-offs.
-- Diagnose common retrieval failures before blaming the generator.
-- Read and explain `demos/03_sparse_dense_hybrid.py` and the related functions in `demos/rag_core.py`.
+- 解释检索模块在 RAG 系统里负责什么。
+- 区分 sparse retrieval、dense retrieval 和 hybrid retrieval。
+- 从工程角度理解 BM25 公式。
+- 理解 embedding 检索、向量相似度，以及为什么“语义相似”不等于“能支持答案”。
+- 解释为什么生产 RAG 常用 hybrid retrieval。
+- 理解 RRF 和加权融合的使用方式与取舍。
+- 在责怪生成模型之前，先诊断检索链路的问题。
+- 读懂并解释 `demos/03_sparse_dense_hybrid.py` 以及 `demos/rag_core.py` 中相关函数。
 
-## Scope
+## 范围
 
-This design covers only Chapter 03 and its explanation of the existing demo.
+本设计只覆盖第 3 章及其现有 demo 的解释。
 
-In scope:
+范围内：
 
-- Rewrite `chapters/03_retrieval_sparse_dense_hybrid.md`.
-- Keep the current demo code unchanged unless a small documentation-driven adjustment is clearly needed.
-- Reference current public research and established retrieval concepts.
-- Preserve the chapter's role in the course sequence.
+- 重写 `chapters/03_retrieval_sparse_dense_hybrid.md`。
+- 保持当前 demo 代码不变，除非出现很小的文档驱动型调整。
+- 引用当前公开研究和成熟检索概念。
+- 保持第 3 章在课程中的位置：承接第 2 章索引与 chunk，为第 4 章 query rewrite 和第 5 章 reranking 铺路。
 
-Out of scope:
+范围外：
 
-- Deep reranking implementation. Chapter 05 owns reranking.
-- Query rewriting and HyDE details. Chapter 04 owns those.
-- Full ANN internals. Chapter 02 already introduces indexing; Chapter 03 should only explain enough to place vector search in the retrieval pipeline.
-- Production monitoring and safety. Later chapters cover those.
+- 不深入实现 reranking。第 5 章负责 reranking。
+- 不展开 query rewriting 和 HyDE。第 4 章负责这些内容。
+- 不重复讲完整 ANN 内部原理。第 2 章已经介绍索引；第 3 章只说明向量搜索在检索链路中的位置。
+- 不展开生产监控和安全治理。后续章节覆盖这些内容。
 
-## Recommended Approach
+## 推荐写法
 
-Use a "layered engine room" structure: explain the retrieval engine from first principles, then add sparse retrieval, dense retrieval, hybrid retrieval, tuning, diagnostics, and demo mapping.
+采用“分层发动机舱式”结构：从检索问题的本质开始，依次加入 sparse retrieval、dense retrieval、hybrid retrieval、调参、诊断和 demo 对照。
 
-This balances theory and engineering practice. It avoids becoming either a pure math note or a production checklist with shallow algorithm explanations.
+这样能平衡理论和工程实践，避免章节变成纯数学笔记，也避免变成只讲经验、不讲算法的生产手册。
 
-## Chapter Structure
+## 章节结构
 
-The expanded chapter should have these sections:
+扩写后的章节应包含以下部分：
 
-1. **Retrieval's role in RAG**
-   - Retrieval is candidate evidence selection, not final answering.
-   - The retriever optimizes recall under a context budget.
-   - Bad retrieval caps answer quality.
+1. **检索在 RAG 中的角色**
+   - 检索是候选证据选择，不是最终回答。
+   - retriever 的目标是在上下文预算内提高召回。
+   - 检索质量会限制最终答案质量上限。
 
-2. **Formalizing retrieval**
-   - Define query `q`, corpus `D`, candidate documents `d`, scoring function `s(q, d)`, and `top-k`.
-   - Explain recall vs precision for RAG.
-   - Explain candidate pool vs final context.
+2. **形式化检索问题**
+   - 定义 query `q`、语料库 `D`、候选文档 `d`、打分函数 `s(q, d)` 和 `top-k`。
+   - 解释 RAG 中 recall 和 precision 的取舍。
+   - 区分 candidate pool 和 final context。
 
 3. **Sparse retrieval**
-   - Explain inverted indexes.
-   - Explain TF, IDF, document length normalization.
-   - Present BM25 formula and intuition.
-   - Explain `k1` and `b`.
-   - List strengths: exact identifiers, product names, error codes, code symbols.
-   - List weaknesses: paraphrases, vocabulary mismatch, multilingual semantic matching.
+   - 解释倒排索引。
+   - 解释 TF、IDF、文档长度归一。
+   - 给出 BM25 公式和直觉。
+   - 解释 `k1` 和 `b`。
+   - 说明优势：精确标识符、产品名、错误码、代码符号。
+   - 说明弱点：同义改写、词汇不匹配、多语言语义匹配。
 
 4. **Dense retrieval**
-   - Explain embedding models and vector space.
-   - Explain cosine similarity, dot product, and normalization.
-   - Explain semantic similarity and paraphrase matching.
-   - Explain dense retrieval failure modes: exact token misses, false semantic neighbors, embedding model mismatch, domain drift.
+   - 解释 embedding 模型和向量空间。
+   - 解释 cosine similarity、dot product 和归一化。
+   - 解释语义相似和同义表达匹配。
+   - 说明 dense retrieval 失败模式：漏掉精确 token、错误语义邻居、embedding 模型不匹配、领域漂移。
 
-5. **ANN and vector search in context**
-   - Briefly explain why brute force vector search is expensive.
-   - Place HNSW/IVF/PQ/vector databases in the retrieval pipeline.
-   - Avoid repeating Chapter 02's indexing details.
+5. **ANN 和向量搜索在本章中的位置**
+   - 简要解释为什么暴力向量搜索成本高。
+   - 说明 HNSW、IVF、PQ、向量数据库在检索管线里的位置。
+   - 不重复第 2 章的索引细节。
 
 6. **Hybrid retrieval**
-   - Explain why production RAG often uses multiple recall paths.
-   - Describe candidate union, deduplication, score normalization, weighted fusion, and RRF.
-   - Present RRF formula and why it is robust when scores are not comparable.
-   - Explain when weighted fusion is useful and risky.
+   - 解释为什么生产 RAG 常用多路召回。
+   - 说明候选集合并、去重、分数归一化、加权融合和 RRF。
+   - 给出 RRF 公式，并解释为什么它在分数不可比时很稳健。
+   - 说明加权融合什么时候有用、什么时候有风险。
 
-7. **Metadata and permission filters**
-   - Explain pre-filter vs post-filter.
-   - Explain why filtering after top-k can hurt recall and leak traces.
-   - Cover time, document type, tenant, language, and ACL filters.
+7. **元数据和权限过滤**
+   - 解释 pre-filter 和 post-filter。
+   - 说明为什么 top-k 后再过滤会损害召回，甚至泄漏 trace。
+   - 覆盖时间、文档类型、租户、语言、ACL 等过滤条件。
 
-8. **Failure modes and diagnostics**
-   - No relevant evidence in top-k.
-   - Relevant evidence retrieved but ranked too low.
-   - Dense retrieval misses identifiers.
-   - BM25 misses paraphrases.
-   - Hybrid returns duplicates or noisy near-matches.
-   - Top-k too small loses evidence; top-k too large pollutes generation.
+8. **失败模式和诊断**
+   - top-k 中没有相关证据。
+   - 相关证据被召回但排名太低。
+   - dense retrieval 漏掉标识符。
+   - BM25 漏掉同义表达。
+   - hybrid 返回重复结果或噪声近邻。
+   - top-k 太小会漏证据，top-k 太大会污染生成上下文。
 
-9. **Tuning guide**
-   - `top_k`.
-   - Candidate pool size before rerank.
-   - BM25 `k1` and `b`.
-   - Embedding model choice.
-   - Similarity function and normalization.
-   - RRF constant.
-   - Fusion weights.
+9. **调参指南**
+   - `top_k`。
+   - rerank 前 candidate pool 大小。
+   - BM25 `k1` 和 `b`。
+   - embedding 模型选择。
+   - 相似度函数和归一化。
+   - RRF 常数。
+   - 融合权重。
 
-10. **Demo walkthrough**
-    - Map `BM25Index(CORPUS).search(...)` to sparse retrieval.
-    - Map `dense_style_search(...)` to simplified dense retrieval.
-    - Map `reciprocal_rank_fusion(...)` to hybrid retrieval.
-    - Explain why the demo uses term expansion instead of a real embedding model.
-    - Explain how to replace the toy dense retriever with a real embedding model later.
+10. **Demo 对照讲解**
+    - 将 `BM25Index(CORPUS).search(...)` 对应到 sparse retrieval。
+    - 将 `dense_style_search(...)` 对应到简化版 dense retrieval。
+    - 将 `reciprocal_rank_fusion(...)` 对应到 hybrid retrieval。
+    - 解释为什么 demo 用词项扩展模拟 dense retrieval，而不是调用真实 embedding 模型。
+    - 说明后续如何把玩具版 dense retriever 替换成真实 embedding 模型。
 
-11. **Practical checklist**
-    - What to log.
-    - What metrics to inspect.
-    - How to choose sparse, dense, or hybrid for a new corpus.
-    - What questions to ask before tuning the generator.
+11. **实践检查清单**
+    - 应该记录哪些 trace。
+    - 应该观察哪些指标。
+    - 新语料库如何选择 sparse、dense 或 hybrid。
+    - 在调生成模型之前，应该先问哪些检索问题。
 
-12. **References**
-    - BEIR.
-    - BM25 / probabilistic relevance framework.
-    - Dense Passage Retrieval.
-    - ColBERT or late interaction as a bridge concept.
-    - RAG Survey.
-    - Optional recent retrieval/hybrid RAG references if directly useful.
+12. **参考资料**
+    - BEIR。
+    - BM25 / 概率相关性框架。
+    - Dense Passage Retrieval。
+    - ColBERT 或 late interaction 作为桥接概念。
+    - RAG Survey。
+    - 如果直接有用，补充近期 retrieval / hybrid RAG 资料。
 
-## Algorithm Depth
+## 算法深度
 
-BM25 should include the formula:
+BM25 需要包含公式：
 
 ```text
 score(q, d) = sum IDF(t) * (f(t,d) * (k1 + 1)) / (f(t,d) + k1 * (1 - b + b * |d| / avgdl))
 ```
 
-The chapter should explain:
+章节需要解释：
 
-- `f(t,d)` means term frequency.
-- `IDF(t)` means term rarity.
-- `|d| / avgdl` is length normalization.
-- `k1` controls term frequency saturation.
-- `b` controls how much document length matters.
+- `f(t,d)` 表示词项在文档中的出现频率。
+- `IDF(t)` 表示词项稀有程度。
+- `|d| / avgdl` 是文档长度归一。
+- `k1` 控制词频饱和速度。
+- `b` 控制文档长度对分数的影响程度。
 
-Dense retrieval should include:
+Dense retrieval 需要包含：
 
 ```text
 v_q = embed(q)
@@ -147,43 +147,43 @@ v_d = embed(d)
 score = cosine(v_q, v_d)
 ```
 
-Hybrid retrieval should include:
+Hybrid retrieval 需要包含：
 
 ```text
 RRF(d) = sum 1 / (k + rank_i(d))
 ```
 
-The math should support understanding, not turn the chapter into a proof-heavy paper note.
+数学内容服务于理解，不把章节写成证明导向的论文笔记。
 
-## Demo Requirements
+## Demo 要求
 
-The existing demo should remain simple and dependency-free:
+现有 demo 应保持简单、无第三方依赖：
 
 ```bash
 python demos/03_sparse_dense_hybrid.py
 ```
 
-The chapter should explicitly say that `dense_style_search` is not a real embedding retriever. It uses term expansion and cosine similarity so the course can demonstrate dense-style behavior without external models or vector databases.
+章节要明确说明：`dense_style_search` 不是真实 embedding retriever。它使用词项扩展和余弦相似度，是为了在课程中不依赖外部模型或向量数据库，也能演示 dense-style 行为。
 
-## Acceptance Criteria
+## 验收标准
 
-- Chapter 03 is expanded to a self-contained tutorial.
-- The chapter explains both algorithm principles and engineering trade-offs.
-- The chapter clearly distinguishes retrieval, reranking, and generation.
-- The chapter includes formulas for BM25, cosine similarity, and RRF.
-- The demo walkthrough accurately matches the current code.
-- The chapter does not duplicate Chapter 02's deep indexing content.
-- The chapter does not move Chapter 04 query rewriting or Chapter 05 reranking into this chapter.
-- Existing demo scripts still run.
+- 第 3 章扩写为自包含教程。
+- 同时解释算法原理和工程取舍。
+- 明确区分 retrieval、reranking 和 generation。
+- 包含 BM25、cosine similarity、RRF 的公式。
+- demo 讲解和当前代码一致。
+- 不重复第 2 章对索引结构的深讲。
+- 不把第 4 章 query rewriting 或第 5 章 reranking 提前塞进本章。
+- 现有 demo 脚本仍可运行。
 
-## Validation
+## 验证方式
 
-After implementation, run:
+实现后运行：
 
 ```bash
 python demos/03_sparse_dense_hybrid.py
 python -m py_compile demos/*.py practice/toy_rag.py
 ```
 
-Check git diff to ensure only intended files changed.
+检查 git diff，确认只修改预期文件。
 
