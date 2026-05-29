@@ -19,6 +19,12 @@ TOKEN_RE = re.compile(r"[A-Za-z0-9_]+|[\u4e00-\u9fff]")
 
 @dataclass(frozen=True)
 class Document:
+    """知识库中的一个最小文档片段。
+
+    真实 RAG 系统里，这通常对应一个 chunk。除了正文以外，必须保留
+    `id` 和 `source`，否则后续无法做引用、评估和日志回放。
+    """
+
     id: str
     title: str
     text: str
@@ -28,6 +34,11 @@ class Document:
 
 @dataclass(frozen=True)
 class ScoredDocument:
+    """带分数的检索结果。
+
+    `reason` 用来记录这个结果来自哪个检索/排序阶段，方便观察 trace。
+    """
+
     doc: Document
     score: float
     reason: str
@@ -149,10 +160,22 @@ GRAPH_EDGES = {
 
 
 def tokenize(text: str) -> list[str]:
+    """把输入文本切成小写 token。
+
+    这里支持英文词、数字、下划线和单个中文字符。真实系统通常会换成
+    更专业的 tokenizer 或 embedding 模型自带的分词逻辑。
+    """
+
     return [token.lower() for token in TOKEN_RE.findall(text)]
 
 
 def expanded_terms(text: str) -> list[str]:
+    """给文本 token 做极简同义扩展。
+
+    这不是生产级语义检索，只是为了在无依赖 demo 中模拟 embedding
+    能捕捉语义相近词的效果。
+    """
+
     terms = tokenize(text)
     expanded = list(terms)
     for term in terms:
@@ -161,13 +184,26 @@ def expanded_terms(text: str) -> list[str]:
 
 
 def lexical_overlap(query: str, doc: Document) -> int:
+    """计算 query 和文档之间的词项重叠数量。
+
+    这个小函数会被重排和证据分级复用，用来模拟“直接相关性”的弱信号。
+    """
+
     q = set(tokenize(query))
     d = set(tokenize(doc.title + " " + doc.text))
     return len(q & d)
 
 
 class BM25Index:
+    """一个极简 BM25 稀疏检索索引。
+
+    BM25 适合做 RAG baseline：它不依赖模型，对关键词、错误码、专有名词
+    很有效，而且分数来源相对可解释。
+    """
+
     def __init__(self, docs: list[Document]) -> None:
+        """预计算每个文档的词频、文档长度和全局文档频率。"""
+
         self.docs = docs
         self.term_freqs = [Counter(tokenize(doc.title + " " + doc.text)) for doc in docs]
         self.doc_lengths = [sum(freq.values()) for freq in self.term_freqs]
@@ -177,6 +213,8 @@ class BM25Index:
             self.doc_freqs.update(term_freq.keys())
 
     def search(self, query: str, k: int = 5) -> list[ScoredDocument]:
+        """用 BM25 分数检索 top-k 文档。"""
+
         terms = tokenize(query)
         scored = []
         for idx, doc in enumerate(self.docs):
@@ -186,6 +224,11 @@ class BM25Index:
         return sorted(scored, key=lambda item: item.score, reverse=True)[:k]
 
     def _score(self, terms: Iterable[str], idx: int, k1: float = 1.5, b: float = 0.75) -> float:
+        """计算单个文档对 query terms 的 BM25 分数。
+
+        分数由三部分组成：词频、逆文档频率、文档长度归一化。
+        """
+
         score = 0.0
         tf = self.term_freqs[idx]
         length = self.doc_lengths[idx]
@@ -215,6 +258,12 @@ def dense_style_search(query: str, docs: list[Document] = CORPUS, k: int = 5) ->
 
 
 def cosine(left: Counter[str], right: Counter[str]) -> float:
+    """计算两个稀疏向量的余弦相似度。
+
+    在真实 dense retrieval 中，向量通常来自 embedding 模型；这里用
+    Counter 模拟向量，方便展示相似度计算的本质。
+    """
+
     common = set(left) & set(right)
     numerator = sum(left[t] * right[t] for t in common)
     left_norm = math.sqrt(sum(v * v for v in left.values()))
@@ -225,6 +274,12 @@ def cosine(left: Counter[str], right: Counter[str]) -> float:
 
 
 def reciprocal_rank_fusion(rankings: list[list[ScoredDocument]], k: int = 60, limit: int = 5) -> list[ScoredDocument]:
+    """用 RRF 融合多个检索器的排名结果。
+
+    RRF 不要求 BM25 分数和 dense 分数处在同一尺度，只看每个结果在各自
+    排名中的位置，因此很适合作为 hybrid retrieval 的简单融合方法。
+    """
+
     scores: dict[str, float] = defaultdict(float)
     docs: dict[str, Document] = {}
     reasons: dict[str, list[str]] = defaultdict(list)
@@ -241,6 +296,12 @@ def reciprocal_rank_fusion(rankings: list[list[ScoredDocument]], k: int = 60, li
 
 
 def rerank_for_support(query: str, candidates: list[ScoredDocument], k: int = 5) -> list[ScoredDocument]:
+    """用规则模拟“证据支持度”重排。
+
+    真实系统通常用 cross-encoder、LLM judge 或学习排序模型。这里用标题
+    重叠、正文重叠和少量支持性动词模拟，让 demo 保持无依赖。
+    """
+
     reranked = []
     for item in candidates:
         title_bonus = lexical_overlap(query, Document(item.doc.id, item.doc.title, "", item.doc.source))
@@ -252,6 +313,11 @@ def rerank_for_support(query: str, candidates: list[ScoredDocument], k: int = 5)
 
 
 def grade_evidence(query: str, evidence: list[ScoredDocument]) -> str:
+    """给当前 top evidence 做粗粒度质量分级。
+
+    Corrective RAG 会根据证据强弱决定是否继续改写 query、补检索或拒答。
+    """
+
     if not evidence:
         return "missing"
     best = evidence[0]
@@ -264,6 +330,12 @@ def grade_evidence(query: str, evidence: list[ScoredDocument]) -> str:
 
 
 def rewrite_query(query: str) -> str:
+    """把用户 query 改写成更适合检索的形式。
+
+    这里用固定规则模拟 query rewrite / HyDE-like expansion。真实系统可以
+    用 LLM 生成多个查询或假想答案，再进入检索阶段。
+    """
+
     replacements = {
         "bad retrieval": "weak irrelevant evidence corrective rag rewrite query refuse answer",
         "not enough evidence": "weak evidence corrective rag retrieve again refuse answer",
@@ -278,6 +350,12 @@ def rewrite_query(query: str) -> str:
 
 
 def grounded_answer(question: str, evidence: list[ScoredDocument]) -> str:
+    """根据证据生成一个带引用的模板化回答。
+
+    真实系统会把这一步替换成 LLM 调用，但仍然应该保留“只基于证据回答”
+    和“输出引用”的约束。
+    """
+
     if not evidence:
         return "资料不足：没有检索到可用证据。"
     lines = [f"问题：{question}", "回答："]
@@ -288,6 +366,11 @@ def grounded_answer(question: str, evidence: list[ScoredDocument]) -> str:
 
 
 def decompose_question(question: str) -> list[str]:
+    """把复杂问题拆成多个子问题。
+
+    这是 multi-hop RAG 的最小形态：先针对子问题分别检索，再合并证据。
+    """
+
     lowered = question.lower()
     if "compare" in lowered or "对比" in lowered:
         return ["What is sparse BM25 retrieval?", "What is dense embedding retrieval?", question]
@@ -297,6 +380,12 @@ def decompose_question(question: str) -> list[str]:
 
 
 def graph_neighborhood(start: str, max_depth: int = 2) -> list[str]:
+    """从图中的起点节点向外扩展邻域。
+
+    GraphRAG 的真实版本会构建实体-关系图和社区摘要。这里用一个小图
+    演示“先扩展相关实体，再把图邻域注入检索 query”的思路。
+    """
+
     visited = {start}
     queue = deque([(start, 0)])
     order = []
@@ -313,11 +402,15 @@ def graph_neighborhood(start: str, max_depth: int = 2) -> list[str]:
 
 
 def recall_at_k(results: list[ScoredDocument], relevant: set[str], k: int) -> float:
+    """计算 Recall@k：top-k 中命中的相关文档占全部相关文档的比例。"""
+
     found = {item.doc.id for item in results[:k]}
     return len(found & relevant) / len(relevant)
 
 
 def mrr(results: list[ScoredDocument], relevant: set[str]) -> float:
+    """计算 MRR：第一个相关文档排名的倒数。"""
+
     for rank, item in enumerate(results, start=1):
         if item.doc.id in relevant:
             return 1 / rank
@@ -325,6 +418,8 @@ def mrr(results: list[ScoredDocument], relevant: set[str]) -> float:
 
 
 def print_ranking(title: str, ranking: list[ScoredDocument]) -> None:
+    """打印排名结果，帮助观察检索和重排 trace。"""
+
     print(title)
     for idx, item in enumerate(ranking, start=1):
         print(f"{idx}. {item.doc.id} score={item.score:.3f} reason={item.reason} title={item.doc.title}")
