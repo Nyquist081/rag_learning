@@ -1,13 +1,13 @@
-"""A tiny dependency-free RAG practice script.
+"""一个无第三方依赖的极简 RAG 练习脚本。
 
-It demonstrates:
-- chunk indexing
-- BM25 retrieval
-- simple reranking
-- evidence-grounded answer templating
-- retrieval metric calculation
+它演示了：
+- chunk 索引
+- BM25 检索
+- 简单重排
+- 基于证据的模板化回答
+- 检索指标计算
 
-Run from the repository root:
+从仓库根目录运行：
     python rag_learning/practice/toy_rag.py
 """
 
@@ -153,10 +153,10 @@ class BM25Index:
 
 
 def rerank(question: str, candidates: list[RetrievedChunk]) -> list[RetrievedChunk]:
-    """A tiny lexical reranker.
+    """一个极简词法重排器。
 
-    Production systems usually use a cross-encoder, a smaller LLM, or a learned ranker.
-    This function is intentionally simple so the ranking mechanics are visible.
+    生产系统通常会使用 cross-encoder、小模型 LLM 或学习排序模型。
+    这里刻意保持简单，方便直接看到重排机制。
     """
 
     question_terms = set(tokenize(question))
@@ -234,4 +234,3 @@ def run_eval() -> None:
 if __name__ == "__main__":
     run_demo()
     run_eval()
-

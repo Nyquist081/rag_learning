@@ -1,8 +1,8 @@
-"""Shared toy components for the chapter demos.
+"""章节 demo 共用的玩具级 RAG 组件。
 
-The code is intentionally dependency-free. It models the mechanics of RAG:
-chunking, sparse retrieval, dense-style retrieval, fusion, reranking, correction,
-multi-hop planning, graph traversal, grounding, and metrics.
+这份代码刻意不引入第三方依赖，用来演示 RAG 的核心机制：
+切分、稀疏检索、类 dense 检索、融合、重排、纠错、多跳规划、
+图遍历、证据约束生成和指标评估。
 """
 
 from __future__ import annotations
@@ -202,7 +202,7 @@ class BM25Index:
 
 
 def dense_style_search(query: str, docs: list[Document] = CORPUS, k: int = 5) -> list[ScoredDocument]:
-    """A tiny embedding-like retriever based on term expansion and cosine similarity."""
+    """用词项扩展和余弦相似度模拟一个极简 embedding 检索器。"""
 
     q = Counter(expanded_terms(query))
     scored = []
@@ -328,4 +328,3 @@ def print_ranking(title: str, ranking: list[ScoredDocument]) -> None:
     print(title)
     for idx, item in enumerate(ranking, start=1):
         print(f"{idx}. {item.doc.id} score={item.score:.3f} reason={item.reason} title={item.doc.title}")
-
