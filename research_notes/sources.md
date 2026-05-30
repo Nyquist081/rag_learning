@@ -13,6 +13,9 @@
 
 - BEIR, 2021, heterogeneous zero-shot IR benchmark: https://arxiv.org/abs/2104.08663
 - HyDE, 2022, Precise Zero-Shot Dense Retrieval without Relevance Labels: https://arxiv.org/abs/2212.10496
+- Query2doc, 2023, Query Expansion with Large Language Models: https://arxiv.org/abs/2303.07678
+- Step-back Prompting, 2023: https://arxiv.org/abs/2310.06117
+- Query Expansion by Prompting Large Language Models, 2023: https://arxiv.org/abs/2305.03653
 - Lost in the Middle, 2023, long-context position sensitivity: https://arxiv.org/abs/2307.03172
 - Pairwise Ranking Prompting, 2023: https://arxiv.org/abs/2306.17563
 
@@ -32,4 +35,3 @@
 - BadRAG, 2024, vulnerabilities in retrieval augmented generation: https://arxiv.org/abs/2406.00083
 - OWASP Top 10 for LLM Applications 2025: https://owasp.org/www-project-top-10-for-large-language-model-applications
 - SD-RAG, 2026, prompt-injection-resilient selective disclosure: https://arxiv.org/abs/2601.11199
-
