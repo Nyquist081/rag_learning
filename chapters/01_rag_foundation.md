@@ -376,6 +376,14 @@ print(grounded_answer(question, evidence))
 
 这也暴露了 BM25 的特点：如果用户换一种完全不同的说法，BM25 可能找不到同一段证据。第 3 章会引入 dense-style retrieval 和 hybrid retrieval 来处理这个问题。
 
+如果你希望看更接近生产环境的 loading、chunking、metadata 和增量更新实现，运行：
+
+```bash
+python demos/production_ingestion/run_pipeline.py
+```
+
+详细说明见 [生产化 ingestion demo](../demos/production_ingestion/README.md)。
+
 ## 9. 判断 RAG 是否适合你的问题
 
 适合 RAG：
@@ -455,4 +463,3 @@ security
 - Lewis et al., 2020, Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks: https://arxiv.org/abs/2005.11401
 - Gao et al., 2023, Retrieval-Augmented Generation for Large Language Models: A Survey: https://arxiv.org/abs/2312.10997
 - Lost in the Middle, 2023: https://arxiv.org/abs/2307.03172
-

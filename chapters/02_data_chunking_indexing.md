@@ -760,6 +760,33 @@ id=d01 source=notes/rag_basics.md tags=basics title=RAG definition
 3. 写一个结构递归 chunker。
 4. 对比固定切分和递归切分的 `Recall@k`。
 
+### 18.1 生产化 ingestion demo
+
+本仓库已经补充了一条更接近生产环境的数据管线：
+
+```bash
+python demos/production_ingestion/run_pipeline.py
+```
+
+代码入口：
+
+- [run_pipeline.py](../demos/production_ingestion/run_pipeline.py)
+- [ingestion_pipeline.py](../demos/production_ingestion/ingestion_pipeline.py)
+- [README.md](../demos/production_ingestion/README.md)
+
+它展示了：
+
+- 目录扫描和 loader 路由。
+- Markdown、HTML、JSON、TXT 加载。
+- Markdown 标题层级、代码块、表格保留。
+- 结构优先递归切分。
+- token overlap。
+- `doc_id`、`chunk_id`、source、hash、版本等 metadata。
+- manifest 和增量更新判断。
+- JSONL chunk 快照输出。
+
+这套 demo 刻意只依赖 Python 标准库。真实生产系统里，可以把 loader 换成 Unstructured、Docling、LlamaParse，把 JSONL sink 换成 Elasticsearch、OpenSearch 或向量数据库。
+
 ## 19. 常见问题排查
 
 ### 问题 1：文档有答案，但检索不到
@@ -820,4 +847,3 @@ id=d01 source=notes/rag_basics.md tags=basics title=RAG definition
 - RAPTOR, 2024: https://arxiv.org/abs/2401.18059
 - Late Chunking, 2024: https://arxiv.org/abs/2409.04701
 - Is Semantic Chunking Worth the Computational Cost?, 2024: https://arxiv.org/abs/2410.13070
-

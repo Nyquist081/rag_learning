@@ -51,6 +51,16 @@ python demos/09_eval_regression.py
 
 核心共享代码在 [demos/rag_core.py](demos/rag_core.py)。
 
+## 生产化 Ingestion Demo
+
+前三章的 toy demo 用来理解算法。要观察更接近生产环境的文档 loading 和 chunking 管线，运行：
+
+```bash
+python demos/production_ingestion/run_pipeline.py
+```
+
+详细说明见 [demos/production_ingestion/README.md](demos/production_ingestion/README.md)。
+
 ## 技术地图
 
 基础能力：
@@ -94,4 +104,3 @@ python demos/09_eval_regression.py
 
 - [advanced_rag_checklist.md](advanced_rag_checklist.md)
 - [practice/toy_rag.py](practice/toy_rag.py)
-

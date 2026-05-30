@@ -1,0 +1,13 @@
+[
+  {
+    "code": "ERR_AUTH_0042",
+    "message": "Refresh token is invalid",
+    "action": "Clear the session and request a new login"
+  },
+  {
+    "code": "ERR_RATE_0001",
+    "message": "Request rate exceeded",
+    "action": "Apply exponential backoff"
+  }
+]
+

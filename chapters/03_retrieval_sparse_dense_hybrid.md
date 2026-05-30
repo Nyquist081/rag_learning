@@ -814,6 +814,14 @@ trace logger
 5. 增加 reranker。
 6. 保存每一步 trace。
 
+文档 loading、结构解析和 chunking 的生产化示例见：
+
+```bash
+python demos/production_ingestion/run_pipeline.py
+```
+
+详细说明见 [生产化 ingestion demo](../demos/production_ingestion/README.md)。
+
 ## 23. 新语料库如何选择检索策略
 
 如果语料包含大量：
@@ -901,4 +909,3 @@ BM25 baseline + dense retrieval + RRF
 - Wang et al., 2022, Text Embeddings by Weakly-Supervised Contrastive Pre-training (E5): https://arxiv.org/abs/2212.03533
 - Cormack, Clarke, and Buettcher, 2009, Reciprocal Rank Fusion: https://doi.org/10.1145/1571941.1572114
 - Gao et al., 2023, Retrieval-Augmented Generation for Large Language Models: A Survey: https://arxiv.org/abs/2312.10997
-

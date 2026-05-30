@@ -1,0 +1,11 @@
+Incident summary
+
+On 2026-05-20 the authentication service experienced an elevated error rate after a deployment changed access token validation behavior. Requests carrying recently refreshed tokens were incorrectly classified as expired. The first visible symptom was an increase in HTTP 401 responses from the user profile API. The profile API itself was healthy, but it depended on the authentication service for token validation. Because the error surfaced at the API boundary, the initial investigation focused on the profile API rather than the downstream dependency. Traffic volume was normal, database latency remained stable, and cache hit rate did not change. Several responders initially suspected that a regional network issue was causing clients to reuse stale credentials. That hypothesis was rejected after comparing request traces from multiple regions and confirming that the same validation response occurred inside the authentication service. The incident demonstrates why dependency-aware diagnostics matter: the service returning an error is not always the service creating the error.
+
+Detection and diagnosis
+
+The alert fired when the five-minute HTTP 401 rate exceeded the normal baseline. Engineers compared application logs, deployment records, and service dependency metrics. Logs showed that the validation failure started within two minutes of the authentication deployment. A configuration diff revealed that the accepted clock skew changed from sixty seconds to zero seconds. This made otherwise valid tokens fail validation when clocks differed slightly across hosts. Rolling back the deployment restored the previous behavior and reduced the error rate.
+
+Corrective actions
+
+The team restored the sixty-second clock skew allowance, added a deployment check for token validation configuration, and created a dashboard that separates authentication failures from profile API failures. The runbook now tells responders to inspect downstream authentication metrics before changing profile API capacity. A regression test covers recently refreshed tokens across hosts with small clock differences. The configuration is versioned and reviewed with the same process as application code.

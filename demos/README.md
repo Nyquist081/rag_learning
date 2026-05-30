@@ -29,3 +29,13 @@ done
 - `09_eval_regression.py`：Recall@k 和 MRR 回归测试。
 - `10_security_filtering.py`：不可信文档过滤。
 
+## 生产化 Ingestion
+
+前三章的脚本主要用于理解概念。文档 loading、结构解析、递归 chunking、
+overlap、metadata、内容哈希和增量复用见：
+
+```bash
+python demos/production_ingestion/run_pipeline.py
+```
+
+详细说明见 [production_ingestion/README.md](production_ingestion/README.md)。
